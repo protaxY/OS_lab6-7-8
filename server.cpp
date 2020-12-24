@@ -1,5 +1,16 @@
 //вариант 27 топология - 3, тип команд - 1, тип проверки доступности узлов - 3
 
+10 - пинг
+11 - нода мертва
+20 - посчитайт на ноде
+21 - результат подсчета
+30 - создать ноду
+31 - нода создана
+32 - ноду уже существует
+40 - удалить ноду
+41 - нода удалена
+42 - такой ноды не существует
+
 #include <cstring>
 #include <zmq.hpp>
 #include <string>
@@ -14,9 +25,9 @@ void* to_rec;
 void* from_result;
 
 struct Message {
-    std::string type;
+    int type;
     unsigned int id;
-    std::vector<int> task;
+    //std::vector<int> task;
 };
 
 [[noreturn]] void* thread_func_wait_result(void*) {
@@ -24,6 +35,7 @@ struct Message {
         Message msg;
         //Message* msg_ptr = &msg;
         zmq_std::recieve_msg_wait(msg, from_result);
+        std::cout << "recive\n";
         std::cout << msg.type << " " << msg.id << "\n";
     }
     return NULL;
@@ -46,8 +58,8 @@ struct Message {
 
 int main (int argc, char const *argv[])
 {
-    assert(argc == 2);
-    unsigned int node_id = std::stoll(std::string(argv[1]));
+//    assert(argc == 2);
+//    unsigned int node_id = std::stoll(std::string(argv[1]));
 
     void* context = zmq_ctx_new();
     from_result = zmq_socket(context, ZMQ_PULL);

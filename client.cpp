@@ -24,7 +24,7 @@ pthread_mutex_t* mutex;
 struct Message{
     std::string type;
     unsigned int id;
-    std::vector<int> task;
+    //std::vector<int> task;
 };
 
 [[noreturn]] void* thread_func_wait_rec(void*) {
@@ -34,7 +34,7 @@ struct Message{
         Message* msg_ptr = &msg;
         if (msg.id == node_id && msg.type == "calculate"){
             msg.type = "result";
-            msg.task.push_back(1);
+            //msg.task.push_back(1);
             zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if (msg.id == node_id && msg.type == "create"){
             msg.type = "already created";
@@ -142,6 +142,8 @@ struct Message{
 }
 
 int main (int argc, char** argv) {
+    mutex =(pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
+
     std::cout << argv[0] << "\n";
     std::cout << argv[1] << "\n";
     //std::cout << argv[2] << "\n";
@@ -177,6 +179,8 @@ int main (int argc, char** argv) {
     pthread_create(&res_left, nullptr, thread_func_wait_result_left, nullptr);
     pthread_t res_right;
     pthread_create(&res_right, nullptr, thread_func_wait_result_right, nullptr);
+    pthread_t heartbeat;
+    pthread_create(&res_right, nullptr, heartbeat_func, nullptr);
 
 
 
@@ -185,6 +189,8 @@ int main (int argc, char** argv) {
     rc = pthread_join(res_left, NULL);
     assert(rc == 0);
     rc = pthread_join(res_right, NULL);
+    assert(rc == 0);
+    rc = pthread_join(heartbeat, NULL);
     assert(rc == 0);
 
     return 0;
