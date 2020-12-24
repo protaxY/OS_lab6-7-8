@@ -8,6 +8,8 @@
 #include "ZMQ.h"
 
 unsigned int node_id;
+bool left_child = false;
+bool right_child = false;
 
 void* from_rec = nullptr;
 void* to_rec_left = nullptr;
@@ -29,19 +31,52 @@ struct Message{
     while (true) {
         Message msg;
         zmq_std::recieve_msg_wait(msg, from_rec);
+        Message* msg_ptr = &msg;
         if (msg.id == node_id && msg.type == "calculate"){
             msg.type = "result";
             msg.task.push_back(1);
-            zmq_std::send_msg_dontwait(&msg, to_result);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if (msg.id == node_id && msg.type == "create"){
             msg.type = "already created";
-            zmq_std::send_msg_dontwait(&msg, to_result);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if (msg.id != node_id && msg.type == "create"){
+            if (msg.id < node_id && left_child == true){
+                zmq_std::send_msg_dontwait(msg_ptr, to_rec_left);
+            } else if (msg.id > node_id && right_child == true){
+                zmq_std::send_msg_dontwait(msg_ptr, to_rec_right);
+            } else if (msg.type == "create" && msg.id < node_id && left_child == false){
+                int rc = zmq_bind(form_result_left, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + msg.id)).c_str());
+                assert(rc == 0);
+                rc = zmq_connect(to_rec_left, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + msg.id)).c_str());
+                assert(rc == 0);
 
+                int id = fork();
+                if (id == 0){
+
+                } else if (id == 1){
+                    if (execl(std::to_string(msg.id).c_str(), std::to_string(msg.id).c_str() ,std::to_string(node_id).c_str()) == -1){
+                        printf("execl error\n");
+                    }
+                }
+            } else if (msg.type == "create" && msg.id > node_id && right_child == false){
+                int rc = zmq_bind(form_result_right, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + msg.id)).c_str());
+                assert(rc == 0);
+                rc = zmq_connect(to_rec_right, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + msg.id)).c_str());
+                assert(rc == 0);
+
+                int id = fork();
+                if (id == 0){
+
+                } else if (id == 1){
+                    if (execl(std::to_string(msg.id).c_str(), std::to_string(msg.id).c_str() ,std::to_string(node_id).c_str()) == -1){
+                        printf("execl error\n");
+                    }
+                }
+            }
         } else if (msg.id < node_id){
-            zmq_std::send_msg_dontwait(&msg, to_rec_left);
+            zmq_std::send_msg_dontwait(msg_ptr, to_rec_left);
         } else if (msg.id > node_id){
-            zmq_std::send_msg_dontwait(&msg, to_rec_right);
+            zmq_std::send_msg_dontwait(msg_ptr, to_rec_right);
         }
     }
     return NULL;
@@ -51,17 +86,18 @@ struct Message{
     while (true) {
         Message msg;
         zmq_std::recieve_msg_wait(msg, form_result_left);
+        Message* msg_ptr = &msg;
         pthread_mutex_lock(mutex);
         if (msg.type == "result"){
-            zmq_std::send_msg_dontwait(&msg, to_result);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if (msg.type == "already created"){
-            zmq_std::send_msg_dontwait(&msg, to_result);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if (msg.type == "created"){
-            zmq_std::send_msg_dontwait(&msg, to_result);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if (msg.type == "dead"){
-            zmq_std::send_msg_dontwait(&msg, to_result);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if (msg.type == "alive"){
-            zmq_std::send_msg_dontwait(&msg, to_result);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
         }
         pthread_mutex_unlock(mutex);
     }
@@ -72,17 +108,18 @@ struct Message{
     while (true) {
         Message msg;
         zmq_std::recieve_msg_wait(msg, form_result_right);
+        Message* msg_ptr = &msg;
         pthread_mutex_unlock(mutex);
         if (msg.type == "result"){
-            zmq_std::send_msg_dontwait(&msg, to_result);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if (msg.type == "already created"){
-            zmq_std::send_msg_dontwait(&msg, to_result);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if (msg.type == "created"){
-            zmq_std::send_msg_dontwait(&msg, to_result);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if (msg.type == "dead"){
-            zmq_std::send_msg_dontwait(&msg, to_result);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if (msg.type == "alive"){
-            zmq_std::send_msg_dontwait(&msg, to_result);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
         }
         pthread_mutex_unlock(mutex);
     }
@@ -95,16 +132,15 @@ struct Message{
         Message msg;
         msg.id = node_id;
         msg.type = "alive";
+        Message* msg_ptr = &msg;
         pthread_mutex_lock(mutex);
-        zmq_std::send_msg_dontwait(&msg, to_result);
+        zmq_std::send_msg_dontwait(msg_ptr, to_result);
         pthread_mutex_unlock(mutex);
     }
     return NULL;
 }
 
 int main (int argc, char** argv) {
-    bool left_child = false;
-    bool right_child = false;
 
     assert(argc == 3);
     node_id = std::stoll(std::string(argv[1]));
@@ -120,7 +156,7 @@ int main (int argc, char** argv) {
 
     int rc = zmq_bind(from_rec, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + node_id)).c_str());
 	assert(rc == 0);
-    rc = zmq_connect(to_result, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + parent_id)).c_str());
+    rc = zmq_connect(to_result, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + node_id)).c_str());
     assert(rc == 0);
 
     pthread_mutexattr_t mutexAttribute;
