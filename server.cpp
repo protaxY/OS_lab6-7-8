@@ -56,21 +56,32 @@ int main (int argc, char const *argv[])
     unsigned int root_id;
     std::cin >> root_id;
 
-    int rc = zmq_bind(from_result, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + root_id)).c_str());
+    int rc = zmq_bind(from_result, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + root_id)).c_str());
     assert(rc == 0);
-    rc = zmq_connect(to_rec, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + root_id)).c_str());
+    rc = zmq_connect(to_rec, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + root_id)).c_str());
     assert(rc == 0);
 
+    pthread_t result;
+    pthread_create(&result, nullptr, thread_func_wait_result, nullptr);
+    pthread_t rec;
+    pthread_create(&rec, nullptr, thread_func_send_rec, nullptr);
+
+    std::cout << root_id << "\n";
+    std::cout << std::to_string(root_id).c_str();
+    std::cout << "create\n";
     int id = fork();
     if (id == 0){
-
-        //assert(rc == 0);
-    } else if (id == 1){
-        char* argv[4] = {0, 0, "-1", (char *)NULL};
-        if (execl(std::to_string(0).c_str(), std::to_string(0).c_str(), std::to_string(0).c_str()) == -1){
+        std::cout << root_id << "\n";
+        std::cout << std::to_string(root_id).c_str();
+        if (execl("client", std::to_string(root_id).c_str(), std::to_string(root_id).c_str(), std::to_string(-1).c_str(), NULL) == -1){
             printf("execl error\n");
         }
     }
+
+    rc = pthread_join(rec, NULL);
+    assert(rc == 0);
+    rc = pthread_join(result, NULL);
+    assert(rc == 0);
 
     return 0;
 }

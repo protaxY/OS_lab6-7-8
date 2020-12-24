@@ -54,7 +54,7 @@ struct Message{
                 if (id == 0){
 
                 } else if (id == 1){
-                    if (execl(std::to_string(msg.id).c_str(), std::to_string(msg.id).c_str() ,std::to_string(node_id).c_str()) == -1){
+                    if (execl(std::to_string(msg.id).c_str(), std::to_string(msg.id).c_str() ,std::to_string(node_id).c_str(), NULL) == -1){
                         printf("execl error\n");
                     }
                 }
@@ -68,7 +68,7 @@ struct Message{
                 if (id == 0){
 
                 } else if (id == 1){
-                    if (execl(std::to_string(msg.id).c_str(), std::to_string(msg.id).c_str() ,std::to_string(node_id).c_str()) == -1){
+                    if (execl(std::to_string(msg.id).c_str(), std::to_string(msg.id).c_str() ,std::to_string(node_id).c_str(), NULL) == -1){
                         printf("execl error\n");
                     }
                 }
@@ -128,7 +128,8 @@ struct Message{
 
 [[noreturn]] void* heartbeat_func(void*) {
     while (true) {
-        sleep(4);
+        sleep(1);
+        std::cout << "sending\n";
         Message msg;
         msg.id = node_id;
         msg.type = "alive";
@@ -141,10 +142,14 @@ struct Message{
 }
 
 int main (int argc, char** argv) {
-
+    std::cout << argv[0] << "\n";
+    std::cout << argv[1] << "\n";
+    //std::cout << argv[2] << "\n";
     assert(argc == 3);
-    node_id = std::stoll(std::string(argv[1]));
-    unsigned int parent_id = std::stoll(std::string(argv[2]));
+    node_id = std::strtoul(argv[1], nullptr, 10);
+    //unsigned int parent_id = std::stoll(std::string(argv[2]));
+
+    std::cout << "im child with id " << node_id << "\n";
 
     void* context = zmq_ctx_new();
     from_rec = zmq_socket(context, ZMQ_PULL);
@@ -159,15 +164,12 @@ int main (int argc, char** argv) {
     rc = zmq_connect(to_result, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + node_id)).c_str());
     assert(rc == 0);
 
-    pthread_mutexattr_t mutexAttribute;
-    if (pthread_mutexattr_init(&mutexAttribute) != 0){
-        perror("pthread_mutexattr_init error\n");
-        return -1;
-    }
-    if (pthread_mutex_init(mutex, &mutexAttribute) != 0){
-        perror("pthread_mutex_init error\n");
-        return -1;
-    }
+    std::cout << "hi\n";
+
+    rc = pthread_mutex_init(mutex, nullptr);
+    assert(rc == 0);
+    std::cout << "hi\n";
+
 
     pthread_t rec;
     pthread_create(&rec, nullptr, thread_func_wait_rec, nullptr);
@@ -175,6 +177,8 @@ int main (int argc, char** argv) {
     pthread_create(&res_left, nullptr, thread_func_wait_result_left, nullptr);
     pthread_t res_right;
     pthread_create(&res_right, nullptr, thread_func_wait_result_right, nullptr);
+
+
 
     rc = pthread_join(rec, NULL);
     assert(rc == 0);
