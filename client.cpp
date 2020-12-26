@@ -35,7 +35,10 @@ pthread_mutex_t* mutex_r;
 //41 - поиск левого кандидата
 //42 - поиск правого кандидата
 //43 - реконект ноды-предка
-//44 - нода удалена
+//44 - запрос id ноды-ребенка
+//45 - получить id ноды-ребенка
+//46 - id удаленного кандидата
+//47 - нода удалена
 
 
 struct Message{
@@ -133,8 +136,17 @@ bool alive = true;
                 pthread_mutex_lock(mutex_r);
                 zmq_std::send_msg_dontwait(msg_ptr, to_rec_right);
                 pthread_mutex_unlock(mutex_r);
+            } else if (right_child == false && left_child == true){
+                msg.type = 44;
+                pthread_mutex_lock(mutex_l);
+                zmq_std::send_msg_dontwait(msg_ptr, to_rec_left);
+                pthread_mutex_unlock(mutex_l);
             } else {
-
+                msg.type = 46;
+                msg.id = node_id;
+                pthread_mutex_lock(mutex);
+                zmq_std::send_msg_dontwait(msg_ptr, to_result);
+                pthread_mutex_unlock(mutex);
             }
 
         } else if (msg.type == 42){
@@ -142,9 +154,24 @@ bool alive = true;
                 pthread_mutex_lock(mutex_l);
                 zmq_std::send_msg_dontwait(msg_ptr, to_rec_left);
                 pthread_mutex_unlock(mutex_l);
+            } else if (left_child == false && right_child == true){
+                msg.type = 44;
+                pthread_mutex_lock(mutex_r);
+                zmq_std::send_msg_dontwait(msg_ptr, to_rec_right);
+                pthread_mutex_unlock(mutex_r);
             } else {
-
+                msg.type = 46;
+                msg.id = node_id;
+                pthread_mutex_lock(mutex);
+                zmq_std::send_msg_dontwait(msg_ptr, to_result);
+                pthread_mutex_unlock(mutex);
             }
+        } else if (msg.type == 44){
+            msg.type = 45;
+            msg.id = node_id;
+            pthread_mutex_lock(mutex);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
+            pthread_mutex_unlock(mutex);
         }
 
         else if (msg.id < node_id){
