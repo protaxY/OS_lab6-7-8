@@ -20,6 +20,8 @@ void* form_result_right = nullptr;
 void* to_result = nullptr;
 
 pthread_mutex_t* mutex;
+pthread_mutex_t* mutex_l;
+pthread_mutex_t* mutex_r;
 
 //10 - пинг
 //11 - нода мертва
@@ -31,8 +33,9 @@ pthread_mutex_t* mutex;
 //32 - ноду уже существует
 //40 - удалить ноду
 //41 - поиск левого кандидата
-//42 - реконект ноды-предка
-//43 - нода удалена
+//42 - поиск правого кандидата
+//43 - реконект ноды-предка
+//44 - нода удалена
 
 
 struct Message{
@@ -115,26 +118,43 @@ bool alive = true;
                 zmq_close(from_rec);
                 alive = false;
             } else if (left_child == false){
-                msg.type = 43;
-                pthread_mutex_lock(mutex);
+                msg.type = 42;
+                pthread_mutex_lock(mutex_r);
                 zmq_std::send_msg_dontwait(msg_ptr, to_rec_right);
-                pthread_mutex_unlock(mutex);
+                pthread_mutex_unlock(mutex_r);
             } else if (right_child == false){
-                msg.type = 43;
-                pthread_mutex_lock(mutex);
+                msg.type = 41;
+                pthread_mutex_lock(mutex_l);
                 zmq_std::send_msg_dontwait(msg_ptr, to_rec_left);
-                pthread_mutex_unlock(mutex);
+                pthread_mutex_unlock(mutex_l);
+            }
+        } else if (msg.type == 41){
+            if (right_child == true){
+                pthread_mutex_lock(mutex_r);
+                zmq_std::send_msg_dontwait(msg_ptr, to_rec_right);
+                pthread_mutex_unlock(mutex_r);
+            } else {
+
+            }
+
+        } else if (msg.type == 42){
+            if (left_child == true){
+                pthread_mutex_lock(mutex_l);
+                zmq_std::send_msg_dontwait(msg_ptr, to_rec_left);
+                pthread_mutex_unlock(mutex_l);
+            } else {
+
             }
         }
 
         else if (msg.id < node_id){
-            pthread_mutex_lock(mutex);
+            pthread_mutex_lock(mutex_l);
             zmq_std::send_msg_dontwait(msg_ptr, to_rec_left);
-            pthread_mutex_unlock(mutex);
+            pthread_mutex_unlock(mutex_l);
         } else if (msg.id > node_id){
-            pthread_mutex_lock(mutex);
+            pthread_mutex_lock(mutex_r);
             zmq_std::send_msg_dontwait(msg_ptr, to_rec_right);
-            pthread_mutex_unlock(mutex);
+            pthread_mutex_unlock(mutex_r);
         }
     }
     return NULL;
@@ -200,7 +220,9 @@ bool alive = true;
 }
 
 int main (int argc, char** argv) {
-    mutex =(pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
+    mutex = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
+    mutex_l = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
+    mutex_r = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
 
     std::cout << argv[0] << "\n";
     std::cout << argv[1] << "\n";
@@ -227,6 +249,10 @@ int main (int argc, char** argv) {
     std::cout << "hi\n";
 
     rc = pthread_mutex_init(mutex, nullptr);
+    assert(rc == 0);
+    rc = pthread_mutex_init(mutex_l, nullptr);
+    assert(rc == 0);
+    rc = pthread_mutex_init(mutex_r, nullptr);
     assert(rc == 0);
     std::cout << "hi\n";
 
