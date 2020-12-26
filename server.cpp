@@ -40,6 +40,14 @@ struct Message {
         //std::cout << "recive\n";
         if (msg.type == 22){
             std::cout << msg.type << " " << msg.id << " " << msg.data << "\n";
+        } else if (msg.type == 43){
+            zmq_close(to_rec);
+            zmq_close(from_result);
+            zmq_close(form_result_left);
+            int rc = zmq_bind(from_result, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + msg.data)).c_str());
+            assert(rc == 0);
+            rc = zmq_connect(to_rec, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + msg.data)).c_str());
+            assert(rc == 0);
         }
     }
     return NULL;

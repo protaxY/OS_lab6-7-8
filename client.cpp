@@ -10,6 +10,8 @@
 unsigned int node_id;
 bool left_child = false;
 bool right_child = false;
+int left_child_id = 0;
+int right_child_id = 0;
 
 void* from_rec = nullptr;
 void* to_rec_left = nullptr;
@@ -88,6 +90,7 @@ bool alive = true;
                 rc = zmq_connect(to_rec_left, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + msg.id)).c_str());
                 assert(rc == 0);
                 left_child = true;
+                left_child_id = msg.id;
                 int id = fork();
                 if (id == 0){
                     if (execl("client", std::to_string(msg.id).c_str(), std::to_string(msg.id).c_str() ,std::to_string(node_id).c_str(), NULL) == -1){
@@ -102,6 +105,7 @@ bool alive = true;
                 assert(rc == 0);
                 std::cout << "ok2\n";
                 right_child = true;
+                right_child_id = msg.id;
                 int id = fork();
                 if (id == 0){
 
@@ -137,42 +141,83 @@ bool alive = true;
                 zmq_std::send_msg_dontwait(msg_ptr, to_rec_right);
                 pthread_mutex_unlock(mutex_r);
             } else if (right_child == false && left_child == true){
-                msg.type = 44;
-                pthread_mutex_lock(mutex_l);
-                zmq_std::send_msg_dontwait(msg_ptr, to_rec_left);
-                pthread_mutex_unlock(mutex_l);
-            } else {
-                msg.type = 46;
-                msg.id = node_id;
+                msg.type = 43;
+                msg.data = left_child_id;
                 pthread_mutex_lock(mutex);
                 zmq_std::send_msg_dontwait(msg_ptr, to_result);
                 pthread_mutex_unlock(mutex);
+                msg.type = 46;
+                msg.data = node_id;
+                pthread_mutex_lock(mutex);
+                zmq_std::send_msg_dontwait(msg_ptr, to_result);
+                pthread_mutex_unlock(mutex);
+
+                zmq_close(from_rec);
+                zmq_close(to_rec_left);
+                zmq_close(to_rec_right);
+                zmq_close(form_result_left);
+                zmq_close(form_result_right);
+                zmq_close(to_result);
+                zmq_close(from_rec);
+                alive = false;
+            } else {
+                msg.type = 44;
+                msg.data = node_id;
+                pthread_mutex_lock(mutex);
+                zmq_std::send_msg_dontwait(msg_ptr, to_result);
+                pthread_mutex_unlock(mutex);
+                zmq_close(from_rec);
+                zmq_close(to_rec_left);
+                zmq_close(to_rec_right);
+                zmq_close(form_result_left);
+                zmq_close(form_result_right);
+                zmq_close(to_result);
+                zmq_close(from_rec);
+                alive = false;
             }
 
-        } else if (msg.type == 42){
-            if (left_child == true){
+        } else if (msg.type == 42) {
+            if (left_child == true) {
                 pthread_mutex_lock(mutex_l);
                 zmq_std::send_msg_dontwait(msg_ptr, to_rec_left);
                 pthread_mutex_unlock(mutex_l);
-            } else if (left_child == false && right_child == true){
-                msg.type = 44;
-                pthread_mutex_lock(mutex_r);
-                zmq_std::send_msg_dontwait(msg_ptr, to_rec_right);
-                pthread_mutex_unlock(mutex_r);
-            } else {
-                msg.type = 46;
-                msg.id = node_id;
+            } else if (left_child == false && right_child == true) {
+                msg.type = 43;
+                msg.data = right_child_id;
                 pthread_mutex_lock(mutex);
                 zmq_std::send_msg_dontwait(msg_ptr, to_result);
                 pthread_mutex_unlock(mutex);
+                msg.type = 46;
+                msg.data = node_id;
+                pthread_mutex_lock(mutex);
+                zmq_std::send_msg_dontwait(msg_ptr, to_result);
+                pthread_mutex_unlock(mutex);
+
+                zmq_close(from_rec);
+                zmq_close(to_rec_left);
+                zmq_close(to_rec_right);
+                zmq_close(form_result_left);
+                zmq_close(form_result_right);
+                zmq_close(to_result);
+                zmq_close(from_rec);
+                alive = false;
+            } else {
+                msg.type = 44;
+                msg.data = node_id;
+                pthread_mutex_lock(mutex);
+                zmq_std::send_msg_dontwait(msg_ptr, to_result);
+                pthread_mutex_unlock(mutex);
+                zmq_close(from_rec);
+                zmq_close(to_rec_left);
+                zmq_close(to_rec_right);
+                zmq_close(form_result_left);
+                zmq_close(form_result_right);
+                zmq_close(to_result);
+                zmq_close(from_rec);
+                alive = false;
             }
-        } else if (msg.type == 44){
-            msg.type = 45;
-            msg.id = node_id;
-            pthread_mutex_lock(mutex);
-            zmq_std::send_msg_dontwait(msg_ptr, to_result);
-            pthread_mutex_unlock(mutex);
         }
+
 
         else if (msg.id < node_id){
             pthread_mutex_lock(mutex_l);
@@ -203,6 +248,28 @@ bool alive = true;
             zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if (msg.type == 10){
             zmq_std::send_msg_dontwait(msg_ptr, to_result);
+        } else if (msg.type == 43){
+            zmq_close(from_rec);
+            zmq_close(to_rec_left);
+            zmq_close(form_result_left);
+            int rc = zmq_bind(form_result_left, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + msg.data)).c_str());
+            assert(rc == 0);
+            rc = zmq_connect(to_rec_left, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + msg.data)).c_str());
+            assert(rc == 0);
+            msg.type = 46;
+            pthread_mutex_lock(mutex);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
+            pthread_mutex_unlock(mutex);
+        } else if (msg.type == 44){
+            zmq_close(form_result_left);
+            zmq_close(to_rec_left);
+        } else if (msg.type == 46 && msg.id == node_id){
+            node_id = msg.data;
+            msg.type = 43;
+            msg.data = node_id;
+            pthread_mutex_lock(mutex);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
+            pthread_mutex_unlock(mutex);
         }
         pthread_mutex_unlock(mutex);
     }
@@ -225,6 +292,28 @@ bool alive = true;
             zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if (msg.type == 10){
             zmq_std::send_msg_dontwait(msg_ptr, to_result);
+        } else if (msg.type == 43){
+            zmq_close(from_rec);
+            zmq_close(to_rec_right);
+            zmq_close(form_result_right);
+            int rc = zmq_bind(form_result_right, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + msg.data)).c_str());
+            assert(rc == 0);
+            rc = zmq_connect(to_rec_right, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + msg.data)).c_str());
+            assert(rc == 0);
+            msg.type = 46;
+            pthread_mutex_lock(mutex);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
+            pthread_mutex_unlock(mutex);
+        } else if (msg.type == 44){
+            zmq_close(form_result_right);
+            zmq_close(to_rec_right);
+        } else if (msg.type == 46 && msg.id == node_id){
+            node_id = msg.data;
+            msg.type = 43;
+            msg.data = node_id;
+            pthread_mutex_lock(mutex);
+            zmq_std::send_msg_dontwait(msg_ptr, to_result);
+            pthread_mutex_unlock(mutex);
         }
         pthread_mutex_unlock(mutex);
     }
