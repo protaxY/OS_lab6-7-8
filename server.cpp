@@ -38,12 +38,13 @@ struct Message {
         //Message* msg_ptr = &msg;
         zmq_std::recieve_msg_wait(msg, from_result);
         //std::cout << "recive\n";
+        std::cout << msg.type << " " << msg.id << " " << msg.data << "\n";
         if (msg.type == 22){
             std::cout << msg.type << " " << msg.id << " " << msg.data << "\n";
         } else if (msg.type == 43){
+            std::cout << "par\n";
             zmq_close(to_rec);
             zmq_close(from_result);
-            zmq_close(form_result_left);
             int rc = zmq_bind(from_result, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + msg.data)).c_str());
             assert(rc == 0);
             rc = zmq_connect(to_rec, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + msg.data)).c_str());
@@ -67,6 +68,7 @@ struct Message {
 
 int main (int argc, char const *argv[])
 {
+    std::cout <<  strerror(zmq_errno()) << "\n";
     void* context = zmq_ctx_new();
     from_result = zmq_socket(context, ZMQ_PULL);
     to_rec = zmq_socket(context, ZMQ_PUSH);
@@ -78,19 +80,14 @@ int main (int argc, char const *argv[])
     assert(rc == 0);
     rc = zmq_connect(to_rec, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + root_id)).c_str());
     assert(rc == 0);
-
+    //std::cout <<  strerror(zmq_errno()) << "\n";
     pthread_t result;
     pthread_create(&result, nullptr, thread_func_wait_result, nullptr);
     pthread_t rec;
     pthread_create(&rec, nullptr, thread_func_send_rec, nullptr);
 
-    std::cout << root_id << "\n";
-    std::cout << std::to_string(root_id).c_str();
-    std::cout << "create\n";
     int id = fork();
     if (id == 0){
-        std::cout << root_id << "\n";
-        std::cout << std::to_string(root_id).c_str();
         if (execl("client", std::to_string(root_id).c_str(), std::to_string(root_id).c_str(), std::to_string(-1).c_str(), NULL) == -1){
             printf("execl error\n");
         }
