@@ -42,9 +42,7 @@ struct Message {
 [[noreturn]] void* thread_func_wait_result(void*) {
     while (true) {
         Message msg;
-        //Message* msg_ptr = &msg;
         zmq_std::recieve_msg_wait(msg, from_result);
-        //std::cout << "recive\n";
         pthread_mutex_lock(mutex);
         //std::cout << msg.type << " " << msg.id << " " << msg.data << "\n";
         if (msg.type == 22){
@@ -114,7 +112,6 @@ struct Message {
             pthread_mutex_unlock(mutex);
 
         }
-        //zmq_std::send_msg_dontwait(msg_ptr, to_rec);
     }
     return NULL;
 }
@@ -124,7 +121,6 @@ struct Message {
     Message* msg_ptr = &msg;
     std::string command;
     while (true) {
-        //pthread_mutex_lock(mutex);
         sleep(1);
         for (int i = 0; i < heartbeat_vector.size(); ++i){
             if (time(NULL) - heartbeat_vector[i].time > 4){
@@ -134,8 +130,6 @@ struct Message {
                 pthread_mutex_unlock(mutex);
             }
         }
-        //pthread_mutex_unlock(mutex);
-        //zmq_std::send_msg_dontwait(msg_ptr, to_rec);
     }
     return NULL;
 }

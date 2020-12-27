@@ -58,7 +58,6 @@ void* thread_func_wait_rec(void*) {
         usleep(30000);
         Message msg;
         zmq_std::recieve_msg_wait(msg, from_rec);
-        //std::cout << strerror(zmq_errno()) << "\n";
         Message *msg_ptr = &msg;
         if (msg.id == node_id && msg.type == 20) {
             std::cout << "wait " << msg.data << " elements\n";
@@ -85,11 +84,9 @@ void* thread_func_wait_rec(void*) {
             zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if ((msg.id != node_id && msg.type == 30) &&
                    ((left_child == false && msg.id < node_id) || (right_child == false && msg.id > node_id))) {
-            //std::cout << "ok\n";
             if (msg.id < node_id && left_child == false) {
                 int rc = zmq_bind(form_result_left,
                                   ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + msg.id)).c_str());
-                //std::cout << strerror(zmq_errno()) << "\n";
                 assert(rc == 0);
 
                 rc = zmq_connect(to_rec_left, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + msg.id)).c_str());
@@ -106,7 +103,6 @@ void* thread_func_wait_rec(void*) {
             } else if (msg.id > node_id && right_child == false) {
                 int rc = zmq_bind(form_result_right,
                                   ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + msg.id)).c_str());
-                //std::cout << strerror(zmq_errno()) << "\n";
                 assert(rc == 0);
                 rc = zmq_connect(to_rec_right, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + msg.id)).c_str());
                 assert(rc == 0);
@@ -128,8 +124,6 @@ void* thread_func_wait_rec(void*) {
                 pthread_mutex_lock(mutex);
                 zmq_std::send_msg_dontwait(msg_ptr, to_result);
                 pthread_mutex_unlock(mutex);
-                //std::cout << "del\n";
-                //zmq_close(from_rec);
                 zmq_disconnect(to_result, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + node_id)).c_str());
                 zmq_disconnect(to_rec_right, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + right_child_id)).c_str());
                 zmq_disconnect(to_rec_left, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + left_child_id)).c_str());
@@ -160,7 +154,6 @@ void* thread_func_wait_rec(void*) {
             pthread_mutex_unlock(mutex_r);
         }
     }
-    std::cout << "end\n";
     return NULL;
 }
 
@@ -182,7 +175,6 @@ void* thread_func_wait_result_left(void*) {
         } else if (msg.type == 10){
             zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if (msg.type == 44){
-            //std::cout << "disconnect\n";
             right_child = false;
             zmq_unbind(form_result_left, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + left_child_id)).c_str());
             zmq_disconnect(to_rec_left, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + left_child_id)).c_str());
@@ -190,7 +182,6 @@ void* thread_func_wait_result_left(void*) {
         }
         pthread_mutex_unlock(mutex);
     }
-    std::cout << "end\n";
     return NULL;
 }
 
@@ -212,14 +203,12 @@ void* thread_func_wait_result_right(void*) {
         } else if (msg.type == 10){
             zmq_std::send_msg_dontwait(msg_ptr, to_result);
         } else if (msg.type == 44){
-            //std::cout << "disconnect\n";
             right_child = false;
             zmq_unbind(form_result_right, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + 1000 + right_child_id)).c_str());
             zmq_disconnect(to_rec_right, ("tcp://127.0.0.1:" + std::to_string(PORT_BASE + right_child_id)).c_str());
         }
         pthread_mutex_unlock(mutex);
     }
-    std::cout << "end\n";
     return NULL;
 }
 
@@ -234,7 +223,6 @@ void* heartbeat_func(void*) {
         pthread_mutex_unlock(mutex);
         sleep(1);
     }
-    std::cout << "end\n";
     return NULL;
 }
 
@@ -287,16 +275,6 @@ int main (int argc, char** argv) {
     rc = pthread_detach(heartbeat);
     assert(rc == 0);
 
-//    rc = pthread_join(rec, NULL);
-//    assert(rc == 0);
-//    rc = pthread_join(res_left, NULL);
-//    assert(rc == 0);
-//    std::cout << "im dead " << node_id << "\n";
-//    rc = pthread_join(res_right, NULL);
-//    assert(rc == 0);
-//    rc = pthread_join(heartbeat, NULL);
-//    assert(rc == 0);
-//    std::cout << "im dead " << node_id << "\n";
     while(alive){}
     return 0;
 }
