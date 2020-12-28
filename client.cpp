@@ -60,7 +60,7 @@ void* thread_func_wait_rec(void*) {
         zmq_std::recieve_msg_wait(msg, from_rec);
         Message *msg_ptr = &msg;
         if (msg.id == node_id && msg.type == 20) {
-            std::cout << "wait " << msg.data << " elements\n";
+            std::cout << "wait for " << msg.data << " elements\n";
             cnt = 0;
             calculate_data.clear();
             calculate_data.resize(msg.data);

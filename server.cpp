@@ -107,10 +107,7 @@ struct Message {
             msg.type = 21;
             std::cin >> msg.data;
             zmq_std::send_msg_dontwait(msg_ptr, to_rec);
-            //sleep(4);
-            sleep(1);
             pthread_mutex_unlock(mutex);
-
         }
     }
     return NULL;
@@ -124,7 +121,7 @@ struct Message {
         sleep(1);
         for (int i = 0; i < heartbeat_vector.size(); ++i){
             if (time(NULL) - heartbeat_vector[i].time > 4){
-                std::cout << "node " << heartbeat_vector[i].id << " is dead\n";
+                std::cout << "node " << heartbeat_vector[i].id << " is temporarily unavailable\n";
                 pthread_mutex_lock(mutex);
                 heartbeat_vector.erase(heartbeat_vector.begin() + i);
                 pthread_mutex_unlock(mutex);
@@ -143,6 +140,7 @@ int main (int argc, char const *argv[]){
     from_result = zmq_socket(context, ZMQ_PULL);
     to_rec = zmq_socket(context, ZMQ_PUSH);
 
+    std::cout << "enter root id:";
     unsigned int root_id;
     std::cin >> root_id;
 
@@ -157,6 +155,13 @@ int main (int argc, char const *argv[]){
     pthread_create(&rec, nullptr, thread_func_send_rec, nullptr);
     pthread_t heartbeat;
     pthread_create(&heartbeat, nullptr, heartbeat_monitor, nullptr);
+
+    pthread_mutex_lock(mutex);
+    QTimer tmp;
+    tmp.id = root_id;
+    tmp.time = time(NULL);
+    heartbeat_vector.push_back(tmp);
+    pthread_mutex_unlock(mutex);
 
     int id = fork();
     if (id == 0){
